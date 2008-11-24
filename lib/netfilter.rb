@@ -12,7 +12,8 @@ module Netfilter
     end
 
     def new_chain(name)
-      Chain.new(self, name)
+      @chains << Chain.new(self, name)
+      @chains.last
     end
 
     def method_missing(method, *args)
@@ -38,12 +39,12 @@ module Netfilter
   end
 
   class FilterTable < Table
-    def initialize
+    def initialize(*args)
+      super(args)
       @name = "filter"
-      @chains = []
-      @chains << new_chain("input")
-      @chains << new_chain("forward")
-      @chains << new_chain("output")
+      new_chain("input")
+      new_chain("forward")
+      new_chain("output")
     end
   end
 
@@ -73,7 +74,7 @@ module Netfilter
     end
 
     def drop(options = {})
-      new_rule(options.update(:action => drop))
+      new_rule(options.update(:action => :drop))
     end
 
     def log(options = {})
