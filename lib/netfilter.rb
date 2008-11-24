@@ -91,7 +91,7 @@ module Netfilter
         []
       else
         all_rules = []
-        @rules.each { |r| all_rules += [to_nfarg, r.to_nfargs].combinate }
+        @rules.each { |r| all_rules += [to_nfarg, r.rules].combinate }
         all_rules
       end
     end
@@ -103,15 +103,60 @@ module Netfilter
 
   class Rule
     attr_reader :options
+    attr_reader :chain
+    
+    NFOPTS = {
+      :src => '-s',
+      :dst => '-d',
+      :protocol => { :opt => '-p', :aliases => :p },
+      :state => '-m state --state',
+      :dport => '--dport',
+      :sport => '--sport',
+      :in => '-i',
+      :out => '-o',
+      :prefix => '--log-prefix',
+      :action => { :opt => '-j', :upcase => true }
+    }
 
     def initialize(options = {})
+      @chain = options.delete(:chain)
       @options = options
     end
 
-    def to_nfargs
-      options.combinate.collect { |o| "rule: #{o.keys.join(" ")}" }
+    def rules
+      options.combinate.collect { |o| Rule.new(o).to_nfargs }
     end
 
+    def to_nfargs
+      s = []
+      options.keys.each do |k|
+        val = options[k]
+        val = val.to_nfarg if val.respond_to?(:to_nfarg)
+        s << render_nfarg(k,val)
+      end
+      s.join(" ")
+    end
+
+    private
+
+    def render_nfarg(search_key, value)
+      NFOPTS.keys.each do |k|
+        if NFOPTS[k].is_a? Hash
+          options = NFOPTS[k]
+          keys = [k, options[:aliases]].flatten
+        else
+          keys = [k]
+          options = { :opt => NFOPTS[k]}
+        end
+        
+        if keys.include? search_key
+          opt = options[:opt]
+          value = value.to_s.upcase if options[:upcase]
+          return "#{opt} #{value}"
+        end
+      end
+    end
+    nil
   end
 
   def filter
