@@ -33,5 +33,13 @@ module Netfilter
       assert filter.input.accept :src => [1,2], :dst => [3,4,5], :proto => 'tcp'
       assert_equal 15, filter.rules.size
     end
+
+    def test_scopes
+      assert filter = FilterTable.new
+      assert filter.input.with_scope { accept :src => [1,2] }
+      assert_equal 2, filter.rules.size
+      assert filter.input.with_scope(:src => [1,2,3]) { accept :dst => 1 }
+      assert_equal 5, filter.rules.size
+    end
   end
 end

@@ -57,16 +57,32 @@ module Netfilter
       @rules = []
     end
 
+    def with_scope(*args, &block)
+      @scope = args.first
+      self.instance_exec(&block)
+    ensure
+      @scope = nil
+    end
+
+    def scope
+      @scope||{}
+    end
+
     def accept(options = {})
-      @rules << Rule.new(options.update(:chain => self, :action => :accept))
+      new_rule(options.update(:action => :accept))
     end
 
     def drop(options = {})
-      @rules << Rule.new(options.update(:chain => self, :action => :drop))
+      new_rule(options.update(:action => drop))
     end
 
     def log(options = {})
-      @rules << Rule.new(options.update(:chain => self, :action => :log))
+      new_rule(options.update(:action => :log))
+    end
+
+    # Create a new rule, merging in any scope and passing in this chain
+    def new_rule(options = {})
+      @rules << Rule.new(options.update(scope).update(:chain => self))
     end
 
     def rules
