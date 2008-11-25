@@ -41,5 +41,6 @@ module Netfilter
       assert filter.input.with_scope(:src => [1,2,3]) { accept :dst => 1 }
       assert_equal 5, filter.rules.size
     end
+
   end
 end

@@ -1,43 +1,109 @@
 module Protocols
   require 'ipaddr'
+  require 'set'
 
-  class Udp
+  class Protocol
+    PROTOCOL = nil
+
+    def protocol
+      self.class.const_get(:PROTOCOL)
+    end
+  end
+
+  class ProtocolWithPort < Protocol
+    attr_reader :port
+    
     def initialize(port)
       @port = port
     end
 
-    def to_s
-      "#{self.class.to_s.downcase}.#{@port}"
+    def to_nfarg
+      if port.is_a? Range
+        "#{port.min}:#{port.max}"
+      else
+        port.to_s
+      end
+    end
+
+    def to_nfcmdline(options = {})
+      "-p #{protocol} #{options[:opt]} #{to_nfarg}"
     end
   end
 
-  class Tcp < Udp
+  class ProtocolWithMultiport < ProtocolWithPort
+    attr_reader :ports
+    
+    def initialize(newports)
+      @ports = newports.find_all { |p| p.is_a? Fixnum }
+    end
+
+    def to_nfcmdline(options = {})
+      "-p #{protocol} -m multiport #{options[:opt]}s #{to_nfarg}"
+    end
+
+    def to_nfarg
+      ports.join(",")
+    end
+
+    def empty?
+      ports.empty?
+    end
+  end
+
+  class Udp < ProtocolWithPort
+    PROTOCOL = 'udp'
+  end
+
+  class Tcp < ProtocolWithPort
+    PROTOCOL = 'tcp'
+  end
+  
+  class MultiportUdp < ProtocolWithMultiport
+    PROTOCOL = 'udp'
+  end
+
+  class MultiportTcp < MultiportUdp
+    PROTOCOL = 'tcp'
   end
 
   class Icmp
-    def initialize(code)
-      @code = code
+    def initialize(type)
+      @type = type
     end
 
     def to_s
-      "icmp.#{@code}"
+      "icmp.#{@type}"
+    end
+
+    def to_nfcmdline(options = {})
+      "-p icmp --icmp-type #{@type}"
     end
   end
 
   def tcp(*ports)
-    ports.collect { |port| Tcp.new(port) }
+    build_protocols(ports.flatten, Tcp, MultiportTcp)
   end
 
   def udp(*ports)
-    ports.collect { |port| Udp.new(port) }
+    build_protocols(ports.flatten, Udp, MultiportUdp)
   end
 
-  def icmp(code)
-    Icmp.new(code)
+  def icmp(types)
+    [types].flatten.collect { |t| Icmp.new(t) }
   end
 
   def ip(*ips)
     ips.collect { |a| a.split(/ +/).collect { |b| IPAddr.new(b) } }.flatten
+  end
+
+  def build_protocols(ports, protocol, multiport_protocol)
+    if ports.size > 1
+      multiport = multiport_protocol.new(ports)
+      ports -= multiport.ports
+    end
+    ports.collect! { |p| protocol.new(p) }
+    ports << multiport unless multiport.nil? or multiport.empty?
+    ports
   end
 end
 
