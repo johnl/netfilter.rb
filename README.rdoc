@@ -1,0 +1,43 @@
+= Netfilter.rb
+
+netfilter.rb is a Ruby Library/DSL for writing Linux
+Netfilter/iptables firewall rules.
+
+It's currently in alpha status - a proof of concept that I'm writing
+rspecs for to start developing (and using) it properly.
+
+= Example use
+
+  require 'lib/netfilter.rb'
+  include Netfilter
+  include Netfilter::Protocols
+
+  filter.input.policy = :drop
+  filter.input.accept :in => :lo
+  filter.input.accept :state => :established
+  filter.input.accept :dport => udp(500,4500)
+  filter.input.accept :protocol => [:esp, 4, :ah]
+  
+  trusted = filter.new_chain("trusted")
+  open("trusted-ips.txt").readlines.each do |ip|
+	  trusted.accept :src => ip
+  end
+  filter.input.jump :dport => tcp(22, 25, 110, 6667..6669), :chain => trusted
+  
+  filter.input.with_scope :src => '66.77.88.99' do
+    accept :dport => tcp(80)
+    log :prefix => 'audited: '
+    reject
+  end
+  
+  filter.input.drop :dport => [tcp(139,445), udp(135..137)]
+  filter.input.log :prefix => 'INPUT: ', :limit => '3/s', :burst => 6
+  
+  render_netfilter
+
+= More Info
+
+Author::  John Leach  (mailto:john@johnleach.co.uk)
+Copyright:: Copyright (c) 2010 John Leach
+License:: GPL 3.0
+Github:: http://github.com/johnl/netfilter.rb/tree/master
