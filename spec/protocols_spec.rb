@@ -1,4 +1,4 @@
-require File.join(File.dirname(__FILE__), '../lib/netfilter')
+require File.join(File.dirname(__FILE__), '../lib/netfilter/protocols')
 include Netfilter
 include Protocols
 

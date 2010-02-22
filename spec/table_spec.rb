@@ -1,7 +1,7 @@
 require 'spec/helpers'
-require File.join(File.dirname(__FILE__), '../lib/netfilter')
+require File.join(File.dirname(__FILE__), '../lib/netfilter/table')
+require File.join(File.dirname(__FILE__), '../lib/netfilter/chain')
 include Netfilter
-include Protocols
 
 shared_examples_for "all tables" do
 
