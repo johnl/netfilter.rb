@@ -34,6 +34,7 @@ module Netfilter
 
     def jump(options = {})
       chain_name = options.delete(:chain)
+      chain_name = chain_name.name if chain_name.is_a? Chain
       new_rule(options.update(:jump => chain_name))
     end
 
@@ -78,7 +79,7 @@ module Netfilter
     end
 
     def is_builtin?
-      name =~ /^A-Z+$/
+      /^[A-Z]+$/ === name.to_s
     end
   end
 end
